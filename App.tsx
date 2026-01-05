@@ -14,12 +14,9 @@ import {
 import { drawBackground, drawEntity } from './services/renderer';
 import { checkCollision } from './services/physics';
 
-const CATGIRL_IMAGE_URL = 'https://storage.googleapis.com/ai-studio-bucket-975679134060-us-west1/services/copy-of-super-mario-react-1-1/version-1/catgirl.png';
-
 const App: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const playerImageRef = useRef<HTMLImageElement | null>(null);
-  const [isAssetsLoaded, setIsAssetsLoaded] = useState(false);
+  const [isAssetsLoaded, setIsAssetsLoaded] = useState(true); // Always true now since we draw directly
   
   const [gameState, setGameState] = useState<GameState>({
     status: 'MENU',
@@ -33,24 +30,6 @@ const App: React.FC = () => {
   const entitiesRef = useRef<Entity[]>([]);
   const cameraRef = useRef<Camera>({ x: 0, y: 0 });
   const keys = useRef<{ [key: string]: boolean }>({});
-
-  // Asset Loading
-  useEffect(() => {
-    const img = new Image();
-    img.crossOrigin = "anonymous"; // Handle potential CORS issues for canvas drawImage
-    img.src = CATGIRL_IMAGE_URL;
-    
-    img.onload = () => {
-      console.log('Player image loaded successfully');
-      playerImageRef.current = img;
-      setIsAssetsLoaded(true);
-    };
-
-    img.onerror = () => {
-      console.warn('Player image failed to load from URL, using fallback visuals');
-      setIsAssetsLoaded(true); 
-    };
-  }, []);
 
   const initLevel = useCallback(() => {
     const newEntities: Entity[] = [];
@@ -253,9 +232,7 @@ const App: React.FC = () => {
       drawBackground(ctx, cameraRef.current);
       entitiesRef.current.forEach(e => drawEntity(ctx, e, cameraRef.current));
       
-      drawEntity(ctx, playerRef.current, cameraRef.current, { 
-        playerImage: playerImageRef.current 
-      });
+      drawEntity(ctx, playerRef.current, cameraRef.current);
     };
 
     animationFrameId = requestAnimationFrame(loop);
@@ -279,13 +256,7 @@ const App: React.FC = () => {
           className="bg-transparent"
         />
 
-        {!isAssetsLoaded && (
-          <div className="absolute inset-0 bg-blue-900 flex items-center justify-center">
-             <div className="text-xl animate-pulse">LOADING ASSETS...</div>
-          </div>
-        )}
-
-        {isAssetsLoaded && gameState.status === 'MENU' && (
+        {gameState.status === 'MENU' && (
           <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center text-center p-8">
             <h1 className="text-4xl mb-8 text-pink-400 animate-pulse drop-shadow-[0_0_10px_rgba(244,114,182,0.8)]">SUPER NEKO BROS</h1>
             <p className="mb-8 text-gray-300">ARROWS TO MOVE. SPACE TO JUMP.</p>
