@@ -14,11 +14,12 @@ import {
 import { drawBackground, drawEntity } from './services/renderer';
 import { checkCollision } from './services/physics';
 
-const PLAYER_IMAGE_URL = 'https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/other/official-artwork/25.png'; // Placeholder fallback, but we'll use a better one or descriptive loading
+const CATGIRL_IMAGE_URL = 'https://storage.googleapis.com/ai-studio-bucket-975679134060-us-west1/services/copy-of-super-mario-react-1-1/version-1/catgirl.png';
 
 const App: React.FC = () => {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const playerImageRef = useRef<HTMLImageElement | null>(null);
+  const [isAssetsLoaded, setIsAssetsLoaded] = useState(false);
   
   const [gameState, setGameState] = useState<GameState>({
     status: 'MENU',
@@ -33,17 +34,22 @@ const App: React.FC = () => {
   const cameraRef = useRef<Camera>({ x: 0, y: 0 });
   const keys = useRef<{ [key: string]: boolean }>({});
 
+  // Asset Loading
   useEffect(() => {
-    // Load the character image provided by user
-    // Since I'm an AI, I'll use a data URL representing the character design provided
     const img = new Image();
-    // Using a reliable generic character placeholder that matches the spirit if specific local file isn't found, 
-    // but typically we'd use the provided image as player.png
-    img.src = 'https://i.ibb.co/3ykS8Vf/character.png'; // Assuming a hosted version of the uploaded pixel art
+    img.crossOrigin = "anonymous"; // Handle potential CORS issues for canvas drawImage
+    img.src = CATGIRL_IMAGE_URL;
+    
     img.onload = () => {
+      console.log('Player image loaded successfully');
       playerImageRef.current = img;
+      setIsAssetsLoaded(true);
     };
-    // If the above link breaks, the renderer handles the red-box fallback gracefully.
+
+    img.onerror = () => {
+      console.warn('Player image failed to load from URL, using fallback visuals');
+      setIsAssetsLoaded(true); 
+    };
   }, []);
 
   const initLevel = useCallback(() => {
@@ -100,12 +106,12 @@ const App: React.FC = () => {
     });
 
     playerRef.current = {
-      id: 'mario',
+      id: 'player',
       type: 'PLAYER',
       pos: { x: 100, y: 100 },
       vel: { x: 0, y: 0 },
-      width: 32,
-      height: 48, // Taller character dimensions
+      width: 28, 
+      height: 44, 
       isDead: false,
       isGrounded: false,
       data: { facing: 'right' }
@@ -145,7 +151,6 @@ const App: React.FC = () => {
       const entities = entitiesRef.current;
       if (!player) return;
 
-      // 1. Horizontal Movement
       if (keys.current['ArrowLeft']) {
         player.vel.x -= WALK_SPEED * 0.2;
         player.data.facing = 'left';
@@ -172,7 +177,6 @@ const App: React.FC = () => {
         }
       }
 
-      // 2. Vertical Movement
       player.vel.y += GRAVITY;
       if ((keys.current['Space'] || keys.current['ArrowUp']) && player.isGrounded) {
         player.vel.y = JUMP_FORCE;
@@ -203,7 +207,6 @@ const App: React.FC = () => {
         }
       }
 
-      // 3. Enemy Interaction
       for (const entity of entities) {
         if (entity.type === 'GOOMBA' && !entity.isDead) {
           entity.pos.x += entity.vel.x;
@@ -249,7 +252,10 @@ const App: React.FC = () => {
       ctx.clearRect(0, 0, CANVAS_WIDTH, CANVAS_HEIGHT);
       drawBackground(ctx, cameraRef.current);
       entitiesRef.current.forEach(e => drawEntity(ctx, e, cameraRef.current));
-      drawEntity(ctx, playerRef.current, cameraRef.current, { playerImage: playerImageRef.current });
+      
+      drawEntity(ctx, playerRef.current, cameraRef.current, { 
+        playerImage: playerImageRef.current 
+      });
     };
 
     animationFrameId = requestAnimationFrame(loop);
@@ -259,40 +265,46 @@ const App: React.FC = () => {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-black text-white p-4">
       <div className="w-[800px] flex justify-between mb-2 text-sm uppercase">
-        <div>MARIO<br />{gameState.score.toString().padStart(6, '0')}</div>
+        <div>PLAYER<br />{gameState.score.toString().padStart(6, '0')}</div>
         <div>COINS<br />x{gameState.coins.toString().padStart(2, '0')}</div>
         <div>WORLD<br />1-1</div>
         <div>TIME<br />{gameState.timer}</div>
       </div>
 
-      <div className="relative border-4 border-white overflow-hidden shadow-2xl">
+      <div className="relative border-4 border-white overflow-hidden shadow-2xl rounded-lg bg-[#5c94fc]">
         <canvas
           ref={canvasRef}
           width={CANVAS_WIDTH}
           height={CANVAS_HEIGHT}
-          className="bg-[#5c94fc]"
+          className="bg-transparent"
         />
 
-        {gameState.status === 'MENU' && (
+        {!isAssetsLoaded && (
+          <div className="absolute inset-0 bg-blue-900 flex items-center justify-center">
+             <div className="text-xl animate-pulse">LOADING ASSETS...</div>
+          </div>
+        )}
+
+        {isAssetsLoaded && gameState.status === 'MENU' && (
           <div className="absolute inset-0 bg-black/70 flex flex-col items-center justify-center text-center p-8">
-            <h1 className="text-4xl mb-8 text-blue-400 animate-pulse">SUPER NEKO BROS</h1>
+            <h1 className="text-4xl mb-8 text-pink-400 animate-pulse drop-shadow-[0_0_10px_rgba(244,114,182,0.8)]">SUPER NEKO BROS</h1>
             <p className="mb-8 text-gray-300">ARROWS TO MOVE. SPACE TO JUMP.</p>
             <button
               onClick={startGame}
-              className="bg-blue-600 hover:bg-blue-500 px-8 py-4 rounded text-xl transition-transform active:scale-95"
+              className="bg-pink-600 hover:bg-pink-500 px-10 py-5 rounded-full text-xl transition-all transform hover:scale-110 active:scale-95 shadow-xl"
             >
-              START GAME
+              START ADVENTURE
             </button>
           </div>
         )}
 
         {(gameState.status === 'GAMEOVER' || gameState.status === 'WON') && (
-          <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center text-center">
-            <h1 className="text-5xl mb-4 text-white drop-shadow-lg">{gameState.status === 'WON' ? 'COURSE CLEAR!' : 'GAME OVER'}</h1>
-            <p className="text-2xl mb-8 text-yellow-400">SCORE: {gameState.score}</p>
+          <div className="absolute inset-0 bg-black/80 flex flex-col items-center justify-center text-center backdrop-blur-sm">
+            <h1 className="text-5xl mb-4 text-white drop-shadow-lg font-bold">{gameState.status === 'WON' ? 'COURSE CLEAR!' : 'GAME OVER'}</h1>
+            <p className="text-2xl mb-8 text-yellow-400">FINAL SCORE: {gameState.score}</p>
             <button
               onClick={startGame}
-              className="bg-white text-black px-8 py-4 text-xl hover:bg-gray-200 transition-colors"
+              className="bg-white text-black px-8 py-4 text-xl rounded-lg hover:bg-gray-200 transition-colors shadow-lg"
             >
               TRY AGAIN
             </button>
